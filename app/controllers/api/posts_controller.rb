@@ -1,55 +1,75 @@
 class Api::PostsController < ApplicationController
-  before_action :set_post, only: %i[ show update destroy ]
 
-  # GET /posts
-  def index
-    # @posts = Post.all
-    # render json: @posts
-    posts = Post.all.map{|post| post.tags}
-    render json: posts.include?("tragedy")
-    #{ error: "Tags parameter is required"}, status: 404
+  def success                                          #route: api/ping
+    render json: { "success": true }, status: 200     
   end
 
-  # GET /posts/1
-  # def show
-  #   @post = Post.where(tags: "history")
-  #   render json: @post
-  # end
+  def index                                            #route: api/post
+    if request.query_parameters["tags"]                #checking for the tags param
 
-  # # POST /posts
-  # def create
-  #   @post = Post.new(post_params)
+    vars = request.query_parameters
+    posts = Post.all
 
-  #   if @post.save
-  #     render json: @post, status: :created, location: @post
-  #   else
-  #     render json: @post.errors, status: :unprocessable_entity
-  #   end
-  # end
+    if vars["tags"].include?(",")
 
-  # # PATCH/PUT /posts/1
-  # def update
-  #   if @post.update(post_params)
-  #     render json: @post
-  #   else
-  #     render json: @post.errors, status: :unprocessable_entity
-  #   end
-  # end
+      tags = vars["tags"].split(/,/)
+      results = posts.select do |post|
+        (tags & post[:tags]).size > 0
+      end
 
-  # # DELETE /posts/1
-  # def destroy
-  #   @post.destroy
-  # end
+      render json: results
 
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    # def set_post
-    #   @post = Post.where(tags: "history")
-    #   # @post = Post.find(params[:id])
-    # end
+    else
+      tags = Array(vars["tags"])
+      results = posts.select do |post|
+        (tags & post[:tags]).size > 0
+      end
 
-    # Only allow a list of trusted parameters through.
-    # def post_params
-    #   params.require(:post).permit(:author, :authorId, :likes, :popularity, :reads, :tags)
-    # end
+      if vars["sortBy"]                                  #checking for sortBy and direction
+        
+        if vars["sortBy"] == "id"
+          if vars["direction"] =="asc"
+            render json: results.sort_by{ |i| i[:id]}
+          elsif vars["direction"] == "desc"
+            render json: results.sort_by{ |i| i[:id]}.reverse
+          else render json: results.sort_by{ |i| i[:id]}
+          end
+
+        elsif vars["sortBy"] == "reads"
+          if vars["direction"] == "asc"
+            render json: results.sort_by{ |i| i[:reads]}
+          elsif vars["direction"] == "desc"
+            render json: results.sort_by{ |i| i[:reads]}.reverse
+          else render json: results.sort_by{ |i| i[:reads]}
+        end
+
+        elsif vars["sortBy"] == "likes"
+          if vars["direction"] =="asc"
+            render json: results.sort_by{ |i| i[:likes]}
+          elsif vars["direction"] == "desc"
+            render json: results.sort_by{ |i| i[:likes]}.reverse
+          else render json: results.sort_by{ |i| i[:likes]}
+        end
+
+        elsif vars["sortBy"] == "popularity"
+          if vars["direction"] =="asc"
+          render json: results.sort_by{ |i| i[:popularity]}
+          elsif vars["direction"] == "desc"
+            render json: results.sort_by{ |i| i[:popularity]}.reverse
+          else render json: results.sort_by{ |i| i[:popularity]}
+        end
+
+        else render json: { "error": "sortBy parameter is invalid" }, status: 400
+        end
+
+      else
+      render json: results
+      end
+
+    end
+  else
+    render json: { "error": "Tags parameter is required" }, status: 400
+  end
+  end #index
+
 end
